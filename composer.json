@@ -7,7 +7,9 @@
       "email": "lucas@ld-web.net"
     }
   ],
-  "require": {},
+  "require": {
+    "doctrine/orm": "^2.10"
+  },
   "scripts": {
     "start": "php -S localhost:8000 -t public/ public/index.php"
   },
