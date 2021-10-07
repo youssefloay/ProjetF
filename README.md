@@ -1,4 +1,4 @@
-# Sciences-U - B3 IW - PHP7 MVC from scratch
+# Sciences-U - B3 IW - PHP7-8 MVC from scratch
 
 - [Introduction](#introduction)
 - [Démarrage](#démarrage-du-projet-avec-composer)
