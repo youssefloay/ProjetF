@@ -18,6 +18,9 @@
   - [Création d'une entité](#création-dune-première-entité)
   - [Insertion d'un enregistrement](#insertion-dun-enregistrement-en-base-de-données)
   - [Le problème des assets](#le-problème-des-assets-fichiers-statiques)
+- [Un point sur les dépendances](#un-point-sur-les-dépendances)
+  - [Récuperation du projet](#récupération-du-projet)
+  - [Mise à jour des dépendances](#mise-à-jour-des-dépendances)
 
 ## Introduction
 
