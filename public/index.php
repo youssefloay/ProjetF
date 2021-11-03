@@ -13,18 +13,22 @@ if (
 use App\Entity\User;
 use Doctrine\ORM\Tools\Setup;
 use Doctrine\ORM\EntityManager;
+use Symfony\Component\Dotenv\Dotenv;
+
+$dotenv = new Dotenv();
+$dotenv->loadEnv(__DIR__ . '/../.env');
 
 // On indique à Doctrine où aller chercher les entités
 // pour les analyser et les mapper dans la base de données
 $paths = [__DIR__ . "/../src/Entity"];
-$isDevMode = true;
+$isDevMode = ($_ENV['APP_ENV'] === 'dev');
 
 $dbParams = [
-  'driver'   => 'pdo_mysql',
-  'host'     => 'localhost:3640',
-  'user'     => 'root',
-  'password' => 'motdepasse',
-  'dbname'   => 'php_mvc',
+  'driver'   => $_ENV['DB_DRIVER'],
+  'host'     => $_ENV['DB_HOST'] . ':' . $_ENV['DB_PORT'],
+  'user'     => $_ENV['DB_USER'],
+  'password' => $_ENV['DB_PASSWORD'],
+  'dbname'   => $_ENV['DB_NAME'],
 ];
 
 $config = Setup::createAnnotationMetadataConfiguration(
