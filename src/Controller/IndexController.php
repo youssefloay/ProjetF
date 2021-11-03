@@ -24,4 +24,9 @@ class IndexController
     $em->persist($user);
     $em->flush();
   }
+
+  public function contact()
+  {
+    echo "Formulaire de contact";
+  }
 }

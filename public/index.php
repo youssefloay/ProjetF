@@ -12,6 +12,7 @@ if (
 
 use App\Config\Connection;
 use App\Controller\IndexController;
+use App\Router;
 use Symfony\Component\Dotenv\Dotenv;
 
 // Env vars - Possibilité d'utiliser le pattern Adapter
@@ -24,9 +25,23 @@ $connection = new Connection();
 $entityManager = $connection->init();
 
 // Routage
-$requestUri = $_SERVER['REQUEST_URI'];
+$router = new Router();
 
-if ($requestUri === '/') {
-  $controller = new IndexController();
-  $controller->index($entityManager);
-}
+$router->addRoute(
+  'home',
+  '/',
+  'GET',
+  IndexController::class,
+  'index'
+)->addRoute(
+  'contact',
+  '/contact',
+  'GET',
+  IndexController::class,
+  'contact'
+);
+
+$requestUri = $_SERVER['REQUEST_URI'];
+$requestMethod = $_SERVER['REQUEST_METHOD'];
+
+$router->execute($requestUri, $requestMethod);
