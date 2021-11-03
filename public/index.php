@@ -10,7 +10,7 @@ if (
   return false;
 }
 
-use App\Entity\User;
+use App\Controller\IndexController;
 use Doctrine\ORM\Tools\Setup;
 use Doctrine\ORM\EntityManager;
 use Symfony\Component\Dotenv\Dotenv;
@@ -42,16 +42,9 @@ $config = Setup::createAnnotationMetadataConfiguration(
 // Un gestionnaire d'entités = paramètres de connexion + objet configuration
 $entityManager = EntityManager::create($dbParams, $config);
 
-$user = new User();
+$requestUri = $_SERVER['REQUEST_URI'];
 
-$user->setName("Bob")
-  ->setFirstName("John")
-  ->setUsername("Bobby")
-  ->setPassword("randompass")
-  ->setEmail("bob@bob.com")
-  ->setBirthDate(new DateTime('1981-02-16'));
-
-// On demande au gestionnaire d'entités de persister l'objet
-// Attention, à ce moment-là l'objet n'est pas encore enregistré en BDD
-$entityManager->persist($user);
-$entityManager->flush();
+if ($requestUri === '/') {
+  $controller = new IndexController();
+  $controller->index($entityManager);
+}
