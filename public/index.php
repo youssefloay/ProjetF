@@ -11,10 +11,13 @@ if (
 }
 
 use App\Config\Connection;
+use App\Config\TwigEnvironment;
 use App\Controller\IndexController;
 use App\Routing\RouteNotFoundException;
 use App\Routing\Router;
 use Symfony\Component\Dotenv\Dotenv;
+use Twig\Environment;
+use Twig\Loader\FilesystemLoader;
 
 // Env vars - Possibilité d'utiliser le pattern Adapter
 // Pour pouvoir varier les dépendances qu'on utilise
@@ -24,6 +27,10 @@ $dotenv->loadEnv(__DIR__ . '/../.env');
 // BDD
 $connection = new Connection();
 $entityManager = $connection->init();
+
+// Twig - Vue
+$twigEnvironment = new TwigEnvironment();
+$twig = $twigEnvironment->init();
 
 // Routage
 $router = new Router();
@@ -49,5 +56,5 @@ try {
   $router->execute($requestUri, $requestMethod);
 } catch (RouteNotFoundException $e) {
   http_response_code(404);
-  echo $e->getMessage();
+  echo $twig->render('404.html.twig', ['title' => $e->getMessage()]);
 }
