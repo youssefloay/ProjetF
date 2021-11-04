@@ -6,7 +6,7 @@ use App\Entity\User;
 use DateTime;
 use Doctrine\ORM\EntityManager;
 
-class IndexController
+class IndexController extends AbstractController
 {
   public function index(EntityManager $em)
   {
@@ -27,6 +27,6 @@ class IndexController
 
   public function contact()
   {
-    echo "Formulaire de contact";
+    echo $this->twig->render('index/contact.html.twig');
   }
 }

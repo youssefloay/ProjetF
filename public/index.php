@@ -33,7 +33,7 @@ $twigEnvironment = new TwigEnvironment();
 $twig = $twigEnvironment->init();
 
 // Routage
-$router = new Router();
+$router = new Router($twig);
 
 $router->addRoute(
   'home',

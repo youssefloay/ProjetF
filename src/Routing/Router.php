@@ -2,9 +2,17 @@
 
 namespace App\Routing;
 
+use Twig\Environment;
+
 class Router
 {
   private $routes = [];
+  private Environment $twigInstance;
+
+  public function __construct(Environment $twigInstance)
+  {
+    $this->twigInstance = $twigInstance;
+  }
 
   /**
    * Add a route into the router internal array
@@ -68,7 +76,8 @@ class Router
       throw new RouteNotFoundException();
     }
 
-    $controller = new $route['controller'];
+    $controllerName = $route['controller'];
+    $controller = new $controllerName($this->twigInstance);
     $method = $route['method'];
     $controller->$method();
   }
