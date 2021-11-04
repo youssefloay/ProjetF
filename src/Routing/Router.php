@@ -1,6 +1,6 @@
 <?php
 
-namespace App;
+namespace App\Routing;
 
 class Router
 {
@@ -35,31 +35,41 @@ class Router
   }
 
   /**
-   * Checks if a route exists
+   * Get a route. Returns null if not found
    *
    * @param string $uri
    * @param string $httpMethod
-   * @return boolean
+   * @return array|null
    */
-  public function hasRoute(string $uri, string $httpMethod): bool
+  public function getRoute(string $uri, string $httpMethod): ?array
   {
     foreach ($this->routes as $route) {
       if ($route['url'] === $uri && $route['http_method'] === $httpMethod) {
-        return true;
+        return $route;
       }
     }
 
-    return false;
+    return null;
   }
 
+  /**
+   * Executes a route based on provided URI and HTTP method.
+   *
+   * @param string $uri
+   * @param string $httpMethod
+   * @return void
+   * @throws RouteNotFoundException
+   */
   public function execute(string $uri, string $httpMethod)
   {
-    if (!$this->hasRoute($uri, $httpMethod)) {
-      // return 404;
+    $route = $this->getRoute($uri, $httpMethod);
+
+    if ($route === null) {
+      throw new RouteNotFoundException();
     }
 
-    // $controller = new $route['controller'];
-    // $method = $route['method'];
-    // $controller->$method();
+    $controller = new $route['controller'];
+    $method = $route['method'];
+    $controller->$method();
   }
 }

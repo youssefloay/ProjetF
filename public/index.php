@@ -12,7 +12,8 @@ if (
 
 use App\Config\Connection;
 use App\Controller\IndexController;
-use App\Router;
+use App\Routing\RouteNotFoundException;
+use App\Routing\Router;
 use Symfony\Component\Dotenv\Dotenv;
 
 // Env vars - Possibilité d'utiliser le pattern Adapter
@@ -44,4 +45,9 @@ $router->addRoute(
 $requestUri = $_SERVER['REQUEST_URI'];
 $requestMethod = $_SERVER['REQUEST_METHOD'];
 
-$router->execute($requestUri, $requestMethod);
+try {
+  $router->execute($requestUri, $requestMethod);
+} catch (RouteNotFoundException $e) {
+  http_response_code(404);
+  echo $e->getMessage();
+}
