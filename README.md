@@ -340,3 +340,125 @@ Si une nouvelle version satisfait l'intervalle de versions acceptables qu'on a d
 Par exemple, suite à notre `composer update`, le package `doctrine/orm` est passé de la version `2.10.1` à la version `2.10.2`.
 
 Le fichier `composer.lock` est alors mis à jour en conséquence, pour retenir que la version de Doctrine ORM utilisée dans notre application est bien la `2.10.2`.
+
+## Configuration
+
+Nous avons un autre problème à régler : la configuration pour accéder à la base de données se trouve dans le fichier `public/index.php`, et est versionnée. Elle apparaît donc dans ce dépôt Github, en clair.
+
+Ensuite, si quelqu'un d'autre clône ce dépôt, alors soit on sera obligé de s'adapter aux paramètres déclarés dans le fichier, soit on devra changer les paramètres. Mais si on les change, alors du point de vue de Git, il y aura un changement de fichier à commiter.
+
+Nous avons donc besoin d'externaliser la configuration de notre application, et de pouvoir ensuite y faire référence depuis notre application.
+
+Par ailleurs, pour allier flexibilité et sécurité, on ne verra donc plus les paramètres en clair dans le code versionné.
+
+### Les fichiers .env
+
+Les fichiers .env permettent de stocker des paires de clés/valeurs.
+
+Ensuite, on peut utiliser un package comme `symfony/dotenv` pour lire le contenu du fichier et le mapper automatiquement dans le tableau superglobal `$_ENV` de PHP.
+
+On installe donc le composant DotEnv de Symfony : `composer require symfony/dotenv`.
+
+Ensuite, on peut donc déclarer des valeurs par défaut pour nos variables, dans un fichier `.env`.
+
+Les valeurs effectivement utilisées en local, sur notre machine, peuvent quant à elle être déclarée dans un fichier `.env.local`, non versionné sur Git.
+
+> Le fichier `.env` contient donc des valeurs par défaut et sera versionné. Le fichier `.env.local`, non versionné, viendra, pour chaque environnement différent, écraser les valeurs par défaut, pour avoir la configuration adaptée à chaque machine (ou environnement). Du point de vue de l'application, on se contente donc de faire référence à la configuration, sans utiliser de valeurs explicites
+
+Par ailleurs, le composer DotEnv de Symfony introduit également une variable `APP_ENV`, positionnée par défaut à la valeur `dev`. Cette variable peut permettre de configurer les packages selon l'environnement dans lequel on se trouve.
+
+## Les contrôleurs et le routage des requêtes
+
+Pour le moment, notre page d'accueil crée un utilisateur et l'enregistre en BDD. Tout ça se déroule dans le fichier `public/index.php`.
+
+Mais nous préférerions pouvoir définir plusieurs endroits correspondant aux différentes "pages" de notre application.
+
+Par ailleurs, on aimerait pouvoir les définir en étant adapté à un format d'URL comme `/user/profile`, ou encore `/admin/product/edit/5`.
+
+Pour réceptionner les requêtes et les traiter, on va créer une couche de **contrôleurs**.
+
+Ensuite, pour pouvoir trouver le bon contrôleur à exécuter lors de la réception d'une requête, nous aurons besoin d'un **routeur**.
+
+### Contrôleurs
+
+Comme indiqué précédemment, un contrôleur n'agit qu'en tant que **glue** entre le modèle et la vue.
+
+On peut donc déplacer le bout de code qui crée un utilisateur dans une classe `App\Controller\IndexController`
+
+### Routeur
+
+Dans l'index, il est donc maintenant question d'enregistrer des routes, puis de dispatcher une requête entrante auprès du routeur, afin qu'il puisse router cette requête vers le bon contrôleur, en fonction de ses routes enregistrées.
+
+La classe `Router` est donc définie dans un premier temps avec les méthodes suivantes :
+
+- `addRoute` pour ajouter une route
+- `execute` pour router une requête vers la bonne route
+- `getRoute` pour vérifier qu'une route correspondant à une URL et une méthode HTTP existe ou non
+
+Dans le fichier `public/index.php`, on peut donc ajouter notre route pour la page d'accueil :
+
+```php
+$router->addRoute(
+  'home',
+  '/',
+  'GET',
+  IndexController::class,
+  'index'
+);
+```
+
+On peut ajouter/déclarer autant de routes qu'on souhaite dans notre application, puis appeler la méthode `execute` avec l'URL demandée par un client :
+
+```php
+$requestUri = $_SERVER['REQUEST_URI'];
+$requestMethod = $_SERVER['REQUEST_METHOD'];
+
+$router->execute($requestUri, $requestMethod);
+```
+
+#### Un point rapide sur la gestion des erreurs et l'écriture des méthodes
+
+Du point de vue de notre `Router`, nous devons stocker des routes, puis être capable d'en retrouver une si besoin et de l'exécuter.
+
+Nous avons donc défini 3 méthodes permettant d'implémenter ces différentes fonctionnalités.
+
+La signature de la méthode `getRoute` nous indique qu'elle peut retourner un `array` ou bien `null`.
+
+Lorsqu'on appelle `execute` sur notre routeur, nous allons donc gérer le cas dans lequel aucune route n'est trouvée (valeur `null`).
+
+Ceci pourrait être fait de diverses manières. Nous avons opté pour une levée d'exception en cas de route non trouvée.
+
+Ainsi, nous pouvons signaler à tout code appelant notre routeur qu'une route n'a pas été trouvée, et ainsi déléguer à ce code appelant la **responsabilité** de l'action à effectuer.
+
+Ce qu'il faut retenir ici, c'est que ce n'est probablement pas le rôle du routeur de décider quoi faire en cas de page non trouvée, mais davantage au code qui appelle le routeur de se débrouiller avec ça.
+
+Ainsi, dans notre cas, il peut être plus judicieux de gérer l'erreur avec un bloc `try...catch` au niveau de notre fichier `index.php` :
+
+```php
+try {
+  $router->execute($requestUri, $requestMethod);
+} catch (RouteNotFoundException $e) {
+  http_response_code(404);
+  echo "Page non trouvée";
+}
+```
+
+> La définition d'une classe d'exception personnalisée, ici `RouteNotFoundException`, nous permet d'une part une gestion plus fine des exceptions éventuellement levées par notre routeur, mais également d'écrire un code plus clair : nous pouvons **lire** beaucoup plus facilement que dans notre fichier `index.php`, en cas de route non trouvée, on envoie un code 404 et un texte "Page non trouvée"
+
+## La vue
+
+Nous avons monté la couche de **Modèle** et la couche de **Contrôleurs** dans notre application.
+
+Il nous manque encore de quoi afficher les données correctement. Pour monter cette dernière couche, nous allons utiliser un moteur de template, [Twig](https://twig.symfony.com/).
+
+La documentation est assez claire pour l'installation. Ajout de la dépendance via Composer, puis adaptation du code dans `public/index.php` afin de désigner le dossier racine des templates.
+
+Nous ajouterons tout de même la recompilation du cache à chaque rafraîchissement, uniquement en mode `dev` : `'debug' => ($_ENV['APP_ENV'] === 'dev')`. On utilise la variable d'environnement `APP_ENV` comme indiqué dans la partie `Configuration`, pour avoir une configuration dynamique, en fonction de l'environnement.
+
+Cette dépendance envers la vue peut revenir très souvent dans les contrôleurs. En fait, nous allons considérer qu'il nous la faut à chaque fois, donc dans tous les contrôleurs.
+
+Pour éviter de devoir la déclarer dans chaque méthode de contrôleur, nous allons remonter l'instance de Twig dans une classe parente, `AbstractController`, en tant qu'attribut protégé.
+
+Ainsi, toutes les méthodes des contrôleurs, qui seront des enfants de la classe `AbstractController`, pourront accéder à l'instance de Twig nous permettant de générer les vues.
+
+Enfin, nous enregistrerons, **pour le moment**, l'instance de Twig comme attribut du routeur, donc de la classe `Router`, pour pouvoir la désigner et l'injecter de manière explicite lors de la construction d'un contrôleur.
