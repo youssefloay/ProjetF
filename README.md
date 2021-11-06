@@ -21,6 +21,13 @@
 - [Un point sur les dépendances](#un-point-sur-les-dépendances)
   - [Récuperation du projet](#récupération-du-projet)
   - [Mise à jour des dépendances](#mise-à-jour-des-dépendances)
+- [Configuration](#configuration)
+  - [Les fichiers .env](#les-fichiers-env)
+- [Les contrôleurs et le routage des requêtes](#les-contrôleurs-et-le-routage-des-requêtes)
+  - [Contrôleurs](#contrôleurs)
+  - [Routeur](#routeur)
+    - [Un point rapide sur la gestion des erreurs et l'écriture des méthodes](#un-point-rapide-sur-la-gestion-des-erreurs-et-lécriture-des-méthodes)
+- [La vue](#la-vue)
 
 ## Introduction
 
