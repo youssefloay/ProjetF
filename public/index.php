@@ -16,8 +16,6 @@ use App\Controller\IndexController;
 use App\Routing\RouteNotFoundException;
 use App\Routing\Router;
 use Symfony\Component\Dotenv\Dotenv;
-use Twig\Environment;
-use Twig\Loader\FilesystemLoader;
 
 // Env vars - Possibilité d'utiliser le pattern Adapter
 // Pour pouvoir varier les dépendances qu'on utilise
