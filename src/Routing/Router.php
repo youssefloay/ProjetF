@@ -2,6 +2,7 @@
 
 namespace App\Routing;
 
+use ReflectionMethod;
 use Twig\Environment;
 
 class Router
@@ -79,6 +80,15 @@ class Router
     $controllerName = $route['controller'];
     $controller = new $controllerName($this->twigInstance);
     $method = $route['method'];
+
+    $methodInfos = new ReflectionMethod($controllerName . '::' . $method);
+    $methodParameters = $methodInfos->getParameters();
+
+    foreach ($methodParameters as $param) {
+      $paramName = $param->getName();
+      $paramType = $param->getType()->getName();
+    }
+
     $controller->$method();
   }
 }
