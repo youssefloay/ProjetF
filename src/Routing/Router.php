@@ -2,17 +2,18 @@
 
 namespace App\Routing;
 
+use Psr\Container\ContainerInterface;
 use ReflectionMethod;
 use Twig\Environment;
 
 class Router
 {
   private $routes = [];
-  private Environment $twigInstance;
+  private ContainerInterface $container;
 
-  public function __construct(Environment $twigInstance)
+  public function __construct(ContainerInterface $container)
   {
-    $this->twigInstance = $twigInstance;
+    $this->container = $container;
   }
 
   /**
@@ -78,17 +79,26 @@ class Router
     }
 
     $controllerName = $route['controller'];
-    $controller = new $controllerName($this->twigInstance);
+    $controller = new $controllerName($this->container->get(Environment::class));
     $method = $route['method'];
 
     $methodInfos = new ReflectionMethod($controllerName . '::' . $method);
     $methodParameters = $methodInfos->getParameters();
 
+    $params = [];
+
     foreach ($methodParameters as $param) {
-      $paramName = $param->getName();
-      $paramType = $param->getType()->getName();
+      $paramName = $param->getName(); // em
+      $paramType = $param->getType()->getName(); // Doctrine\ORM\EntityManager
+
+      if ($this->container->has($paramType)) { // Doctrine\ORM\EntityManager ?
+        $params[$paramName] = $this->container->get($paramType);
+      }
     }
 
-    $controller->$method();
+    call_user_func_array(
+      [$controller, $method],
+      $params
+    );
   }
 }

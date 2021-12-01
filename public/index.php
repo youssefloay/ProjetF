@@ -13,9 +13,12 @@ if (
 use App\Config\Connection;
 use App\Config\TwigEnvironment;
 use App\Controller\IndexController;
+use App\DependencyInjection\Container;
 use App\Routing\RouteNotFoundException;
 use App\Routing\Router;
+use Doctrine\ORM\EntityManager;
 use Symfony\Component\Dotenv\Dotenv;
+use Twig\Environment;
 
 // Env vars - Possibilité d'utiliser le pattern Adapter
 // Pour pouvoir varier les dépendances qu'on utilise
@@ -30,8 +33,13 @@ $entityManager = $connection->init();
 $twigEnvironment = new TwigEnvironment();
 $twig = $twigEnvironment->init();
 
+// Service Container
+$container = new Container();
+$container->set(EntityManager::class, $entityManager);
+$container->set(Environment::class, $twig);
+
 // Routage
-$router = new Router($twig);
+$router = new Router($container);
 
 $router->addRoute(
   'home',
