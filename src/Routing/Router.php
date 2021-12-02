@@ -3,6 +3,7 @@
 namespace App\Routing;
 
 use Psr\Container\ContainerInterface;
+use ReflectionClass;
 use ReflectionMethod;
 use Twig\Environment;
 
@@ -79,26 +80,41 @@ class Router
     }
 
     $controllerName = $route['controller'];
-    $controller = new $controllerName($this->container->get(Environment::class));
+    $constructorParams = $this->getMethodParams($controllerName, '__construct');
+    $controller = new $controllerName(...$constructorParams);
+
     $method = $route['method'];
-
-    $methodInfos = new ReflectionMethod($controllerName . '::' . $method);
-    $methodParameters = $methodInfos->getParameters();
-
-    $params = [];
-
-    foreach ($methodParameters as $param) {
-      $paramName = $param->getName(); // em
-      $paramType = $param->getType()->getName(); // Doctrine\ORM\EntityManager
-
-      if ($this->container->has($paramType)) { // Doctrine\ORM\EntityManager ?
-        $params[$paramName] = $this->container->get($paramType);
-      }
-    }
+    $params = $this->getMethodParams($controllerName, $method);
 
     call_user_func_array(
       [$controller, $method],
       $params
     );
+  }
+
+  /**
+   * Resolve method's parameters from the service container
+   *
+   * @param string $controller name of controller
+   * @param string $method name of method
+   * @return array
+   */
+  private function getMethodParams(string $controller, string $method): array
+  {
+    $methodInfos = new ReflectionMethod($controller . '::' . $method);
+    $methodParameters = $methodInfos->getParameters();
+
+    $params = [];
+
+    foreach ($methodParameters as $param) {
+      $paramName = $param->getName();
+      $paramType = $param->getType()->getName();
+
+      if ($this->container->has($paramType)) {
+        $params[$paramName] = $this->container->get($paramType);
+      }
+    }
+
+    return $params;
   }
 }
