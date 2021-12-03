@@ -3,11 +3,13 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Routing\Attribute\Route;
 use DateTime;
 use Doctrine\ORM\EntityManager;
 
 class IndexController extends AbstractController
 {
+  #[Route(path: "/")]
   public function index(EntityManager $em)
   {
     $user = new User();
@@ -25,6 +27,7 @@ class IndexController extends AbstractController
     $em->flush();
   }
 
+  #[Route(path: "/contact", name: "contact", httpMethod: "POST")]
   public function contact()
   {
     echo $this->twig->render('index/contact.html.twig');

@@ -2,10 +2,10 @@
 
 namespace App\Routing;
 
+use App\Routing\Attribute\Route;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionMethod;
-use Twig\Environment;
 
 class Router
 {
@@ -116,5 +116,35 @@ class Router
     }
 
     return $params;
+  }
+
+  public function registerRoutes(): void
+  {
+    $files = array_slice(scandir(__DIR__ . '/../Controller'), 2);
+    $controllersNamespace = "App\\Controller\\";
+
+    foreach ($files as $file) {
+      $fqcn = $controllersNamespace . pathinfo($file, PATHINFO_FILENAME);
+      $reflection = new ReflectionClass($fqcn);
+
+      $methods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
+
+      foreach ($methods as $method) {
+        $attributes = $method->getAttributes(Route::class);
+
+        foreach ($attributes as $attribute) {
+          /** @var Route */
+          $route = $attribute->newInstance();
+
+          $this->addRoute(
+            $route->getName(),
+            $route->getPath(),
+            $route->getHttpMethod(),
+            $fqcn,
+            $method->getName()
+          );
+        }
+      }
+    }
   }
 }

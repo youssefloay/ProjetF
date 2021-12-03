@@ -2,8 +2,11 @@
 
 namespace App\Controller;
 
+use App\Routing\Attribute\Route;
+
 class UserController extends AbstractController
 {
+  #[Route(path: "/users", name: "users_list")]
   public function list()
   {
     // Création liste users

@@ -40,20 +40,7 @@ $container->set(Environment::class, $twig);
 
 // Routage
 $router = new Router($container);
-
-$router->addRoute(
-  'home',
-  '/',
-  'GET',
-  IndexController::class,
-  'index'
-)->addRoute(
-  'contact',
-  '/contact',
-  'GET',
-  IndexController::class,
-  'contact'
-);
+$router->registerRoutes();
 
 $requestUri = $_SERVER['REQUEST_URI'];
 $requestMethod = $_SERVER['REQUEST_METHOD'];
