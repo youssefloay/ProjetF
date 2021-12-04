@@ -28,6 +28,15 @@
   - [Routeur](#routeur)
     - [Un point rapide sur la gestion des erreurs et l'écriture des méthodes](#un-point-rapide-sur-la-gestion-des-erreurs-et-lécriture-des-méthodes)
 - [La vue](#la-vue)
+- [Retour sur le routeur : l'injection de dépendances](#retour-sur-le-routeur--linjection-de-dépendances)
+  - [Identifier les dépendances avec l'API Reflection](#identifier-les-dépendances-avec-lapi-reflection)
+  - [Fournir des dépendances à l'aide d'un container de services](#fournir-des-dépendances-à-laide-dun-container-de-services)
+- [Ecrire des tests unitaires](#ecrire-des-tests-unitaires)
+  - [Principaux avantages](#principaux-avantages)
+  - [PHPUnit](#phpunit)
+  - [Ecriture de tests pour notre container de services](#ecriture-de-tests-pour-notre-container-de-services)
+  - [Lancer la suite de tests](#lancer-la-suite-de-tests)
+  - [Générer un rapport de couverture de code](#générer-un-rapport-de-couverture-de-code)
 
 ## Introduction
 
