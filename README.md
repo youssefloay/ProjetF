@@ -469,3 +469,264 @@ Pour éviter de devoir la déclarer dans chaque méthode de contrôleur, nous al
 Ainsi, toutes les méthodes des contrôleurs, qui seront des enfants de la classe `AbstractController`, pourront accéder à l'instance de Twig nous permettant de générer les vues.
 
 Enfin, nous enregistrerons, **pour le moment**, l'instance de Twig comme attribut du routeur, donc de la classe `Router`, pour pouvoir la désigner et l'injecter de manière explicite lors de la construction d'un contrôleur.
+
+## Retour sur le routeur : l'injection de dépendances
+
+Le routeur réalisé jusqu'à maintenant est capable de trouver, pour une URL donnée, le contrôleur associé.
+
+Mais il n'est pas capable de fournir les paramètres adéquats lors de l'exécution d'une méthode. C'est ce que nous constatons avec la méthode `index` de l'`IndexController`, dont la signature ressemble à ça :
+
+```php
+public function index(EntityManager $em) {
+  // ...
+}
+```
+
+Le contrôleur est dépendant d'un gestionnaire d'entités pour pouvoir s'exécuter correctement. Le paramètre attendu est donc une **dépendance** du contrôleur `index`.
+
+Nous avons donc besoin, lorsque nous routons une requête :
+
+- d'identifier les dépendances d'un contrôleur qui aurait été trouvé par le routeur
+- de pouvoir chercher quelque part si nous disposons d'une instance de classe satisfaisant le type du paramètre, que l'on pourrait donc **injecter** dans la méthode
+
+### Identifier les dépendances avec l'API Reflection
+
+Pour identifier les dépendances, ou paramètres d'une méthode, nous pouvons nous appuyer sur l'API [Reflection](https://www.php.net/manual/en/book.reflection).
+Cette API nous permet d'inspecter les **métadonnées** d'une classe, d'une méthode, fonction, etc...
+
+Quand notre routeur trouve une méthode correspondant à l'URL de la requête, donc un contrôleur, nous n'avons donc plus qu'à instancier un objet [ReflectionMethod](https://www.php.net/manual/en/class.reflectionmethod.php) et récupérer les différents paramètres.
+
+```php
+$methodInfos = new ReflectionMethod($controllerName . '::' . $method);
+$methodParameters = $methodInfos->getParameters();
+```
+
+Ensuite, nous pouvons boucler sur les paramètres pour récupérer le type, le nom, etc...
+
+```php
+foreach ($methodParameters as $param) {
+  $paramName = $param->getName();
+  $paramType = $param->getType()->getName();
+}
+```
+
+Retrouvez le commit concerné [ici](https://github.com/ld-web/php_b3_su_mvc_2021/commit/c27976a61d20f35d88609d8dd3771aa3e4a6d5d6).
+
+### Fournir des dépendances à l'aide d'un container de services
+
+Une fois que notre routeur a identifié les dépendances du contrôleur, il lui faut un moyen de chercher si une instance de classe peut y correspondre.
+
+En fait, ces dépendances peuvent aussi être appelées **services**. Notre méthode a besoin d'un service, d'une brique applicative.
+
+Nous allons donc réaliser un petit **container de services**, c'est-à-dire une classe contenant nos services, et que nous pouvons utiliser pour ajouter un service, vérifier l'existence d'un service, ou encore tout simplement **récupérer** un service.
+
+Nous avons déjà vu ensemble la recommandation _PSR-4_, concernant l'auto-chargement des classes dans une application.
+
+Il se trouve qu'il existe une autre recommandation pour la création d'un container de services : [**PSR-11**](https://www.php-fig.org/psr/psr-11/).
+
+Cette recommandation présente une **interface** PHP, `ContainerInterface`, définissant des méthodes à implémenter pour réaliser un container de services.
+
+Si nous voulons réaliser un container compatible PSR-11, nous devons donc réaliser une classe implémentant cette interface.
+
+> **Pourquoi réaliser un container compatible PSR-11 ?** Tout simplement car il s'agit d'une recommandation PHP standard, donc forcément connue par bon nombre de personnes dans la communauté. Par ailleurs, les containers de services faisant référence dans l'écosystème PHP sont compatibles PSR-11 ([celui de Symfony par exemple](https://symfony.com/doc/current/components/dependency_injection.html)). Autant essayer d'appliquer également de bonnes pratiques lors de notre réalisation
+
+Notre container sera très simple : un tableau (`array`) associatif, avec pour clé un identifiant, et pour valeur l'instance de service associée.
+
+Retrouvez le container de services [ici](https://github.com/ld-web/php_b3_su_mvc_2021/blob/master/src/DependencyInjection/Container.php).
+
+Une fois notre container réalisé, nous pouvons l'initialiser à la phase de bootstrap de notre application, dans le fichier `public/index.php` :
+
+```php
+use App\DependencyInjection\Container;
+
+//...
+
+// Service Container
+$container = new Container();
+$container->set(EntityManager::class, $entityManager);
+$container->set(Environment::class, $twig);
+```
+
+Puis l'associer à notre routeur :
+
+```php
+$router = new Router($container);
+```
+
+Dans notre routeur, définissons à présent une méthode `getMethodParams(string $controller, string $method)` qui ira récupérer les paramètres nécessaires dans le container de services.
+
+Nous pourrons utiliser cette méthode à 2 moments :
+
+- La construction de la classe de contrôleurs
+- L'appel d'une méthode de contrôleur
+
+```php
+//...
+$controllerName = $route['controller'];
+$constructorParams = $this->getMethodParams($controllerName, '__construct');
+$controller = new $controllerName(...$constructorParams);
+
+$method = $route['method'];
+$params = $this->getMethodParams($controllerName, $method);
+//...
+```
+
+> Les "..." à la construction du contrôleur permettent d'éclater un tableau et d'injecter un à un ses éléments en tant que paramètre d'une méthode (ici le constructeur). Ceci s'appelle précisément du [argument unpacking](https://wiki.php.net/rfc/argument_unpacking)
+
+Enfin, nous pouvons à présent appeler notre contrôleur avec les paramètres identifiés et récupérés dans le container de services, à l'aide de la méthode de la SPL [call_user_func_array](https://www.php.net/manual/en/function.call-user-func-array) :
+
+```php
+call_user_func_array(
+  [$controller, $method],
+  $params
+);
+```
+
+## Ecrire des tests unitaires
+
+L'écriture de tests dans une application est une tâche souvent longue, donc mise de côté dans les projets.
+
+La présence de tests automatisés peut cependant augmenter significativement la qualité et la fiabilité de votre code, et donc réduire les risques de bugs. C'est spécialement utile sur des parties importantes, voire critiques de votre application.
+
+### Principaux avantages
+
+- Vous pouvez définir des scénarios d'exécution et bénéficier de l'exécution d'un outil qui va valider ces scénarios (dans PHP, PHPUnit par exemple)
+- Si vous changez quelque chose dans votre codebase et que cela invalide un test que vous aviez préalablement écrit (donc un scénario qui était déjà établi et devait fonctionner d'une certaine façon), alors l'échec du test vous prévient directement que quelque chose ne va pas
+- L'écriture de tests peut vous amener à questionner le code que vous écrivez. Un code **testable** est généralement un code bien écrit, car les éléments sont mieux isolés, séparés les uns des autres. Il est donc plus facile d'écrire des tests pour un tel code
+
+### PHPUnit
+
+Dans notre projet, nous allons utiliser [PHPUnit](https://phpunit.de/).
+
+Pour l'installer, nous utilisons Composer :
+
+```bash
+composer require --dev phpunit/phpunit
+```
+
+> Le `--dev` sert à indiquer à Composer qu'il s'agit d'une dépendance de **développement** et pas de production. Nous n'aurons pas besoin de lancer nos tests sur une machine de production, donc il n'y aura pas besoin d'installer PHPUnit sur notre production. Les dépendances de développement sont souvent relatives à des outils pour les développeurs (framework de tests, Linter, formatteur de code, analyseur de qualité de code, etc...)
+
+---
+
+> A l'installation de PHPUnit, un binaire est déposé dans le dossier `vendor/bin`, nommé `phpunit`. C'est ce binaire qu'on utilisera pour lancer nos tests
+
+### Ecriture de tests pour notre container de services
+
+Si l'on veut tester une classe donnée, alors nous allons créer un dossier `tests` à la racine de notre projet.
+
+Le but de ce dossier est de reproduire l'arborescence définie dans le dossier `src` de notre application.
+
+La classe de tests doit être suffixée par `Test`.
+
+Pour notre container, nous allons donc créer le fichier `tests/DependencyInjection/ContainerTest.php`.
+
+```php
+namespace App\Tests\DependencyInjection;
+
+use PHPUnit\Framework\TestCase;
+
+class ContainerTest extends TestCase
+{
+  // Méthodes de tests
+}
+```
+
+**Note** : il faut indiquer à Composer que le namespace `App\Tests` peut être résolu par le dossier `tests` :
+
+```json
+"autoload-dev": {
+  "psr-4": {
+    "App\\Tests\\": "tests/"
+  }
+},
+```
+
+Nous conservons donc PSR-4 pour le nommage de nos classes de tests.
+
+Une méthode de tests présente un scénario. Son nom est préfixé par `test` :
+
+```php
+class ContainerTest extends TestCase
+{
+  public function testHasNotService()
+  {
+    $container = new Container();
+    $hasService = $container->has('test');
+    $this->assertFalse($hasService);
+  }
+}
+```
+
+Dans un test, comme par exemple ci-dessus, il faut faire des **assertions** pour vérifier un résultat attendu. Dans notre exemple, le scénario de test crée un container et vérifie qu'il n'y a pas de service ayant pour identifiant "test" dedans.
+
+Il existe [tout un tas d'assertions](https://phpunit.readthedocs.io/en/latest/assertions.html) pour vérifier un résultat attendu. Vous devez utiliser les assertions pour qu'un test soit valide.
+
+Retrouvez l'ensemble des tests pour notre container [ici](https://github.com/ld-web/php_b3_su_mvc_2021/blob/master/tests/DependencyInjection/ContainerTest.php).
+
+### Lancer la suite de tests
+
+Pour lancer PHPUnit et exécuter les tests qu'on a écrits, il suffit d'utiliser le binaire créé automatiquement à l'installation de PHPUnit, et lui indiquer en paramètre le dossier des tests. On utilisera également l'option `--testdox` pour avoir un affichage mieux formaté :
+
+```bash
+vendor/bin/phpunit tests --testdox
+```
+
+![PHPUnit output](docs/phpunit_output.png "PHPUnit output")
+
+Afin d'éviter d'avoir à taper la commande de lancement de tests à chaque fois, créons un script Composer qui lancera la commande à notre place :
+
+```json
+"scripts": {
+  "start": "php -S localhost:8000 -t public/ public/index.php",
+  "test": "phpunit tests --testdox"
+}
+```
+
+> On peut se permettre d'indiquer uniquement `phpunit` dans un script Composer, car Composer ira chercher automatiquement dans le dossier `vendor/bin` s'il existe ou non un binaire portant ce nom
+
+Ainsi, nous pouvons lancer nos tests simplement avec la commande `composer test`.
+
+### Générer un rapport de couverture de code
+
+> **Note importante** : l'extension [XDEBUG](https://xdebug.org/) doit être installée et activée dans votre configuration PHP pour que cela puisse fonctionner
+
+PHPUnit peut générer un rapport de couverture de code, nous indiquant, pour chaque classe, la quantité de code couverte par les tests que nous avons écrits. Cela peut être utile pour contrôler les parties de notre code couvertes, donc validées par des tests.
+
+Dans un premier temps, nous allons demander à PHPUnit de générer un fichier de configuration, dans lequel se trouvera par défaut le filtre des fichiers à intégrer dans l'analyse de couverture de code : `vendor/bin/phpunit --generate-configuration`.
+
+Un fichier `phpunit.xml` est créé à la racine du projet.
+
+Nous allons changer le paramètre `forceCoversAnnotation` et indiquer `false` pour qu'il détermine lui-même quelle partie du code est couverte ou non, sans qu'on lui indique quoi que ce soit.
+
+Enfin, nous pouvons lancer nos tests avec l'option `--coverage-html coverage` pour qu'il génère un rapport au format HTML et le dépose dans le dossier `coverage`. On ajoutera également ce dossier `coverage` au fichier `.gitignore` de notre projet. On ne veut pas commiter ni pusher un tel fichier généré automatiquement par un outil tiers.
+
+```bash
+vendor/bin/phpunit tests --testdox --coverage-html coverage
+```
+
+PHPUnit nous indique que la variable d'environnement `XDEBUG_MODE` doit avoir la valeur `coverage` pour que la génération du rapport fonctionne :
+
+```bash
+XDEBUG_MODE=coverage vendor/bin/phpunit tests --testdox --coverage-html coverage
+```
+
+Nous pouvons ensuite consulter le rapport en ouvrant le fichier `index.html` du dossier `coverage` :
+
+![Coverage](docs/coverage.png "Coverage")
+
+Nous retrouvons notre classe `Container` dans `DependencyInjection`, qui a visiblement une couverture à 100%. Mais au global, la couverture est très faible bien sûr.
+
+Pour finir, comme nous l'avons fait avant de générer le rapport de couverture de code, nous pouvons créer un script Composer qui exécutera tout ce dont nous aurons besoin : mettre la variable `XDEBUG_MODE` à `coverage`, et exécuter la commande PHPUnit avec les paramètres adéquats.
+
+Nous pouvons même faire encore mieux : séparer les scripts `test` et `test:coverage` afin de ne générer le rapport de couverture quand nous le voudrons. Nous pouvons même référencer `test` dans `test:coverage` pour ne pas avoir à nous répéter !
+
+```json
+"scripts": {
+  "start": "php -S localhost:8000 -t public/ public/index.php",
+  "test": "phpunit tests --testdox",
+  "test:coverage": [
+    "@putenv XDEBUG_MODE=coverage",
+    "@test --coverage-html coverage"
+  ]
+}
+```
