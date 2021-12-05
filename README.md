@@ -37,6 +37,11 @@
   - [Ecriture de tests pour notre container de services](#ecriture-de-tests-pour-notre-container-de-services)
   - [Lancer la suite de tests](#lancer-la-suite-de-tests)
   - [Générer un rapport de couverture de code](#générer-un-rapport-de-couverture-de-code)
+- [Retour sur le routeur (BIS) - Les attributs PHP8](#retour-sur-le-routeur-bis---les-attributs-php8)
+  - [Les attributs, c'est quoi ?](#les-attributs-cest-quoi-)
+  - [Créer un attribut](#créer-un-attribut)
+  - [Utiliser l'attribut dans nos contrôleurs](#utiliser-lattribut-dans-nos-contrôleurs)
+  - [Lire les attributs d'un élément](#lire-les-attributs-dun-élément)
 
 ## Introduction
 
