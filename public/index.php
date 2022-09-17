@@ -12,6 +12,8 @@ if (
 
 use App\Config\Connection;
 use App\Config\TwigEnvironment;
+use App\Controller\FileController;
+use App\Controller\IndexController;
 use App\DependencyInjection\Container;
 use App\Routing\RouteNotFoundException;
 use App\Routing\Router;
@@ -40,6 +42,20 @@ $container->set(Environment::class, $twig);
 // Routage
 $router = new Router($container);
 $router->registerRoutes();
+$router->addRoute(
+  'home',
+  '/',
+  'GET',
+  IndexController::class,
+  'index'
+);
+$router->addRoute(
+  'files_list',
+  '/files',
+  'GET',
+  FileController::class,
+  'list'
+);
 
 if (php_sapi_name() === 'cli') {
   return;
