@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+<h1>File Uploader</h1>
+
+<ul>
+    <li><a href="files/new">Ajouter</a></li>
+</ul>
+<h2>Liste des fichiers</h2>
+
+<table border="1" width="80%">
+    <thead>
+        <td>Id</td>
+        <td>Name</td>
+        <td>Type</td>
+        <td>Description</td>
+        <td>Uploaded By</td>
+        <td>Uploaded At</td>
+        <td>Action</td>
+    </thead>
+    <tbody>
+    {% for file in files %}
+    <tr>
+        <td>{{ file.id }}</td>
+        <td><a href="/upload/{{ file.path }}" target="_blank">{{ file.name }}</a></td>
+        <td>{{ file.type }}</td>
+        <td>{{ file.description }}</td>
+        <td>{{ file.user.username }}</td>
+        <td>{{ file.uploadedAt.format('d/m/Y H:i') }}</td>
+        <td>
+                <form action="files/action" method="post">
+                    <input type="hidden" value="{{ file.id }}" name="id">
+                    <input type="submit" value="Modifier" name="update">
+                    <input type="submit" value="Supprimer" name="delete">
+                </form>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+
+</table>
+</body>
+</html>

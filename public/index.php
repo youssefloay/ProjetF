@@ -1,4 +1,6 @@
 <?php
+// pour ne pas afficher les warnings => à retirer si on prod.
+error_reporting(E_ERROR | E_PARSE);
 
 // Inclut l'autoloader généré par Composer
 require_once __DIR__ . "/../vendor/autoload.php";
@@ -42,20 +44,51 @@ $container->set(Environment::class, $twig);
 // Routage
 $router = new Router($container);
 $router->registerRoutes();
+// la page d'accueil
 $router->addRoute(
-  'home',
-  '/',
-  'GET',
-  IndexController::class,
-  'index'
+    'home',
+    '/',
+    'GET',
+    IndexController::class,
+    'index'
 );
+
+// liste des fichier
 $router->addRoute(
-  'files_list',
-  '/files',
-  'GET',
-  FileController::class,
-  'list'
+    'files_list',
+    '/files',
+    'GET',
+    FileController::class,
+    'list'
 );
+
+// Nouveau un fichier
+$router->addRoute(
+    'files_new',
+    '/files/new',
+    'GET',
+    FileController::class,
+    'new'
+);
+
+// Ajouter un fichier POST FORM
+$router->addRoute(
+    'files_add',
+    '/files/add',
+    'POST',
+    FileController::class,
+    'add'
+);
+
+// Action de modification/supression d'un fichier
+$router->addRoute(
+    'files_action',
+    '/files/action',
+    'POST',
+    FileController::class,
+    'action'
+);
+
 
 if (php_sapi_name() === 'cli') {
   return;
