@@ -1,13 +1,13 @@
-Module upload fichier
+**Module upload fichier**
 
 Composer Install
 
 **Creation File controller**
 
-// public const ALLOW_FILE_TYPE = ['jpg','png','jpeg','gif','pdf', 'doc', 'docx', 'csv'];
+    // public const ALLOW_FILE_TYPE = ['jpg','png','jpeg','gif','pdf', 'doc', 'docx', 'csv'];
  
  
- //public const UPLOAD_DIRECTORY = __DIR__ ."/../../public/upload/";
+    //public const UPLOAD_DIRECTORY = __DIR__ ."/../../public/upload/";
 
      Pour definir le type des fichiers qu'on peut upload ainsi que leur lieu de sauvgarde " dans public/upload
 
@@ -16,23 +16,25 @@ Composer Install
 
 #route pour afficher la liste des fichiers dans la base de donnees 
 
-public function list()
- {
-    $files = $this->entityManager->getRepository(Files::class)->findAll();
+     public function list()
+     {
+     $files = $this->entityManager->getRepository(Files::class)->findAll();
 
 #route pour afficher le template twig avec les actions et les variables 
 
 
-public function new()
+      public function new()
 
 
 #route 
-public function add()
+
+      public function add()
 
 fonction permet d'ajouter un fichier via POST
 
 enfin une fonction BuildFile 
-// cette fonction permet de créer / modifier un fichier selon l'action
+
+      // cette fonction permet de créer / modifier un fichier selon l'action
 
 Creation status message : j'ai du mal a le faire bien fonctionner 
 
